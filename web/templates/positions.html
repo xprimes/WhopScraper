@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% set auto_refresh = true %}
+
+{% block title %}持仓{% endblock %}
+
+{% block content %}
+<h5 class="mb-3 text-muted-soft">期权持仓</h5>
+
+{% if positions %}
+<div class="card mb-4">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>合约代码</th>
+            <th style="width:60px;">类型</th>
+            <th class="text-end">行权价</th>
+            <th style="width:70px;">到期日</th>
+            <th class="text-end">数量</th>
+            <th class="text-end">均价</th>
+            <th class="text-end">现价</th>
+            <th class="text-end">市值</th>
+            <th class="text-end">未实现盈亏</th>
+            <th class="text-end">盈亏%</th>
+            <th class="text-end">止损</th>
+            <th class="text-end">止盈</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in positions %}
+          <tr>
+            <td class="mono" style="white-space:nowrap; color:#e6edf3;">{{ p.get('symbol','') }}</td>
+            <td>
+              <span class="badge {% if p.get('option_type','') == 'CALL' %}text-bg-success{% else %}text-bg-danger{% endif %}" style="font-size:11px;">
+                {{ p.get('option_type','') }}
+              </span>
+            </td>
+            <td class="text-end mono" style="color:#e6edf3;">${{ p.get('strike','') }}</td>
+            <td class="mono text-muted-soft">{{ p.get('expiry','') }}</td>
+            <td class="text-end mono" style="color:#e6edf3;">{{ p.get('quantity',0) }}</td>
+            <td class="text-end mono" style="color:#e6edf3;">${{ "%.2f"|format(p.get('avg_cost',0)) }}</td>
+            <td class="text-end mono" style="color:#e6edf3;">${{ "%.2f"|format(p.get('current_price', p.get('avg_cost',0))) }}</td>
+            <td class="text-end mono" style="color:#e6edf3;">${{ "%.2f"|format(p.get('market_value',0)) }}</td>
+            <td class="text-end mono {% if p.get('unrealized_pnl',0) > 0 %}text-profit{% elif p.get('unrealized_pnl',0) < 0 %}text-loss{% endif %}">
+              {{ "+" if p.get('unrealized_pnl',0) > 0 else "" }}${{ "%.2f"|format(p.get('unrealized_pnl',0)) }}
+            </td>
+            <td class="text-end mono {% if p.get('unrealized_pnl_pct',0) > 0 %}text-profit{% elif p.get('unrealized_pnl_pct',0) < 0 %}text-loss{% endif %}">
+              {{ "+" if p.get('unrealized_pnl_pct',0) > 0 else "" }}{{ "%.1f"|format(p.get('unrealized_pnl_pct',0)) }}%
+            </td>
+            <td class="text-end mono text-loss">
+              {% if p.get('stop_loss_price') %}${{ "%.2f"|format(p.get('stop_loss_price')) }}{% else %}<span class="text-muted-soft">—</span>{% endif %}
+            </td>
+            <td class="text-end mono text-profit">
+              {% if p.get('take_profit_price') %}${{ "%.2f"|format(p.get('take_profit_price')) }}{% else %}<span class="text-muted-soft">—</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="card mb-4"><div class="card-body text-center text-muted-soft py-5">暂无期权持仓</div></div>
+{% endif %}
+
+{% if stock_positions %}
+<h5 class="mb-3 text-muted-soft">正股持仓</h5>
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>代码</th>
+            <th class="text-end">数量</th>
+            <th class="text-end">均价</th>
+            <th class="text-end">现价</th>
+            <th class="text-end">市值</th>
+            <th class="text-end">未实现盈亏</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in stock_positions %}
+          <tr>
+            <td class="mono" style="color:#e6edf3;">{{ p.get('symbol', p.get('ticker','')) }}</td>
+            <td class="text-end mono" style="color:#e6edf3;">{{ p.get('quantity',0) }}</td>
+            <td class="text-end mono" style="color:#e6edf3;">${{ "%.2f"|format(p.get('avg_cost',0)) }}</td>
+            <td class="text-end mono" style="color:#e6edf3;">${{ "%.2f"|format(p.get('current_price', p.get('avg_cost',0))) }}</td>
+            <td class="text-end mono" style="color:#e6edf3;">${{ "%.2f"|format(p.get('market_value',0)) }}</td>
+            <td class="text-end mono {% if p.get('unrealized_pnl',0) > 0 %}text-profit{% elif p.get('unrealized_pnl',0) < 0 %}text-loss{% endif %}">
+              {{ "+" if p.get('unrealized_pnl',0) > 0 else "" }}${{ "%.2f"|format(p.get('unrealized_pnl',0)) }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% set auto_refresh = true %}
+
+{% block title %}交易记录{% endblock %}
+
+{% block content %}
+<h5 class="mb-3 text-muted-soft">交易记录</h5>
+
+{% if orders %}
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>合约</th>
+            <th style="width:70px;">方向</th>
+            <th class="text-end">数量</th>
+            <th class="text-end">价格</th>
+            <th class="text-end">金额</th>
+            <th style="width:160px;">时间</th>
+            <th>备注</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in orders %}
+          {% set side = (o.get('side') or o.get('action') or '')|upper %}
+          {% set price = o.get('price') or o.get('avg_price') %}
+          {% set qty = o.get('quantity') or o.get('qty') or 0 %}
+          <tr>
+            <td class="mono" style="white-space:nowrap; color:#e6edf3;">{{ o.get('symbol','') }}</td>
+            <td>
+              <span class="badge {% if side == 'BUY' %}badge-buy{% else %}badge-sell{% endif %}" style="font-size:11px;">
+                {{ side }}
+              </span>
+            </td>
+            <td class="text-end mono" style="color:#e6edf3;">{{ qty }}</td>
+            <td class="text-end mono" style="color:#e6edf3;">
+              {% if price %}${{ "%.2f"|format(price|float) }}{% else %}<span class="text-muted-soft">—</span>{% endif %}
+            </td>
+            <td class="text-end mono" style="color:#e6edf3;">
+              {% if price and qty %}
+                ${{ "%.2f"|format(qty|float * price|float * 100) }}
+              {% else %}
+                <span class="text-muted-soft">—</span>
+              {% endif %}
+            </td>
+            <td class="mono text-muted-soft" style="font-size:12px; white-space:nowrap;">
+              {{ (o.get('time') or o.get('submitted_at') or '')[:19] }}
+            </td>
+            <td style="font-size:12px; color:#8b949e; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              {{ o.get('remark') or o.get('note') or '' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="card"><div class="card-body text-center text-muted-soft py-5">暂无交易记录</div></div>
+{% endif %}
+{% endblock %}
