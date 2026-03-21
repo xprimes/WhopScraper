@@ -1,6 +1,6 @@
 # 期权信号抓取器 + 自动交易系统 v2.6.15
 
-使用 Playwright 实时监控 Whop 页面，解析期权交易信号,并通过长桥证券 API 自动执行交易，包含完整的持仓管理和风险控制系统。
+使用 Playwright 实时监控 Whop 页面，解析期权交易信号，并通过 **富途牛牛（Futu）** 或长桥证券 API 自动执行交易，含完整持仓管理、风险控制和 Web 可视化看板。
 
 ## ⚠️ 注意
 本项目对于指令的解析完全基于文本正则匹配和历史消息关联，没有使用任何大模型，因此对于新的自然语言描述格式，可能会存在不识别的情况；
@@ -21,11 +21,11 @@
 ## 安装依赖
 
 ```bash
-# 安装 Python 依赖
-pip3 install -r requirements.txt
+# 安装 Python 依赖（需 Python 3.8+）
+pip install -r requirements.txt
 
 # 安装 Playwright 浏览器
-python3 -m playwright install chromium
+python -m playwright install chromium
 ```
 
 ## 配置
@@ -39,66 +39,139 @@ python3 -m playwright install chromium
 cp .env.example .env
 ```
 
-2. 编辑 `.env` 文件，填入你的凭据。
+2. 编辑 `.env` 文件，填入对应凭据（默认使用富途，详见下方）。
 
+---
 
+## 富途牛牛配置（默认）
 
-## 长桥OpenAPI 配置
+富途不需要 App Key / Secret，通过本地 **OpenD 网关**进行通信，**无需任何密钥**。
 
-[https://open.longbridge.com/zh-CN/](https://open.longbridge.com/zh-CN/)
+### 1. 启动 OpenD
+- 打开富途牛牛桌面客户端，登录账号（客户端内置 OpenD，登录即启动）
+- 或从 [富途开发者中心](https://openapi.futunn.com/) 单独下载命令行版 OpenD
 
-![](./images/longport_1.png)
+### 2. 验证连接（可选）
+```bash
+python -c "
+from futu import OpenQuoteContext
+ctx = OpenQuoteContext(host='127.0.0.1', port=11111)
+print(ctx.get_global_state())
+ctx.close()
+"
+```
 
-登录后，就可以看到自己的AppKey，AppSecret，AccessToken
-> 注意：如果期望通过API完成下单操作，需要购买对应的OpenAPI行情 
+### 3. `.env` 富途配置
+```bash
+# 经纪商选择（默认富途）
+BROKER_TYPE=futu
 
-![](./images/longport_2.png)
+# OpenD 网关地址（默认本机）
+FUTU_HOST=127.0.0.1
+FUTU_PORT=11111
 
+# 账户模式
+FUTU_MODE=paper              # paper=模拟账户, real=真实账户
+
+# 交易模式
+FUTU_AUTO_TRADE=false        # 是否启用自动交易
+FUTU_DRY_RUN=true            # true=仅打印不下单（建议先开启测试）
+```
+
+---
+
+## 长桥 OpenAPI 配置（可选）
+
+如需切换到长桥，设置 `BROKER_TYPE=longport`，并填入 API 凭据。
+
+获取 AppKey / AppSecret / AccessToken：[https://open.longbridge.com/zh-CN/](https://open.longbridge.com/zh-CN/)
+
+> 注意：通过 API 下单需购买对应的 OpenAPI 行情权限。
 
 ```bash
-# 长桥账户相关配置
+# 切换到长桥
+BROKER_TYPE=longport
+
 # 账户模式
 LONGPORT_MODE=paper            # paper=模拟账户, real=真实账户
+
 # API 凭据（模拟账户）
 LONGPORT_PAPER_APP_KEY=xxxx
 LONGPORT_PAPER_APP_SECRET=xxxx
 LONGPORT_PAPER_ACCESS_TOKEN=xxxx
+
 # API 凭据（真实账户）
 LONGPORT_REAL_APP_KEY=xxxx
 LONGPORT_REAL_APP_SECRET=xxxx
 LONGPORT_REAL_ACCESS_TOKEN=xxxx
-# 交易模式
-LONGPORT_AUTO_TRADE=true      # 是否启用自动交易
-LONGPORT_DRY_RUN=false          # 是否启用模拟模式（不实际下单）
 
+# 交易模式
+LONGPORT_AUTO_TRADE=true
+LONGPORT_DRY_RUN=false
 ```
 
+---
+
+## Telegram 通知（可选）
+
 ```bash
-# 与TG通信配置，目前我只是跑通了链路，自己并没有使用
-
-# 是否启用 Telegram 确认：开启后，解析到交易指令会发到 Telegram Bot，带「确认/取消」按钮，
-# 只有在 App 里点击确认后才会调用 longport 下单
-# 默认值: false
+# 开启后，解析到交易指令会发到 Telegram Bot，带「确认/取消」按钮，点确认才实际下单
 TELEGRAM_ENABLED=false
-
-# Telegram Bot Token（从 @BotFather 创建 Bot 后获得）
 TELEGRAM_BOT_TOKEN=xxxx:xxxx
-
-# 接收消息的 Chat ID（与 Bot 对话后，可从 getUpdates 或 @userinfobot 等获取）
 TELEGRAM_CHAT_ID=xxxx
 ```
 
-## 抓取Cookie
+## 抓取 Cookie
+
 ```bash
-# 需要抓取网页的cookie，获取登录态，后续可直接监听，不用登录
-# 执行后会自动打开网页，登录完毕在命令行回车即可
+# 需要抓取网页的 Cookie，获取登录态，后续可直接监听无需重复登录
+# 执行后会自动打开浏览器，登录完毕后在命令行按回车即可
 # Cookie 默认保存在 .auth/whop_cookie.json
-python3 whop/whop_login.py
+python whop/whop_login.py
 ```
 
-## 启动系统
+---
+
+## 启动
+
+### 一键启动（推荐）
+
+同时启动 Web 看板和信号抓取，Ctrl+C 一次停止全部：
+
 ```bash
-python3 main.py
+python run.py
+```
+
+访问看板：**http://localhost:5000**
+
+### 单独启动
+
+```bash
+python run.py --web     # 仅启动 Web 看板（演示 / 查看数据）
+python run.py --main    # 仅启动信号抓取主程序
+```
+
+---
+
+## Web 看板说明
+
+| 路由 | 说明 |
+|------|------|
+| `/` 或 `/dashboard` | 持仓概览 + 最近信号 |
+| `/positions` | 完整持仓列表 |
+| `/trades` | 交易记录 |
+| `/signals` | 全量信号列表 |
+
+### 演示数据 / 真实数据切换
+
+页面右上角有切换开关：
+
+- **演示数据**（默认）：内置示例数据，无需运行主程序即可预览
+- **真实数据**：读取 `output/signals.json` 和 `data/positions.json`，需先运行主程序产生数据
+
+也可在 `.env` 中设置默认模式：
+```bash
+DEMO_MODE=true   # true=演示数据（默认）, false=真实数据
 ```
 
 ## 开发者指南
@@ -249,17 +322,20 @@ LONGPORT_DRY_RUN=true       # 是否启用模拟模式（不实际下单）
 
 ### 仅监控模式
 
-如果只想监控信号而不交易，设置：
+如果只想监控信号而不交易，关闭自动交易：
 
 ```bash
-# 在 .env 中
+# 富途（默认）
+FUTU_AUTO_TRADE=false
+
+# 长桥
 LONGPORT_AUTO_TRADE=false
 ```
 
 然后运行：
 
 ```bash
-python3 main.py
+python main.py
 ```
 
 ## 支持的指令格式
@@ -312,48 +388,49 @@ python3 main.py
 
 ## 对接券商 API
 
-### 长桥证券集成（推荐）
+### 富途牛牛集成（默认）
 
-本项目已集成长桥（LongPort）OpenAPI，支持：
+本项目已集成富途 OpenD API，支持：
 - ✅ 模拟账户和真实账户自动切换
-- ✅ 期权自动下单
+- ✅ 期权自动下单（美股期权）
 - ✅ 风险控制和 Dry Run 模式
-- ✅ 完整的测试流程
-
-**查看完整接入指南**：[LONGPORT_INTEGRATION_GUIDE.md](./doc/LONGPORT_INTEGRATION_GUIDE.md)
+- ✅ 无需 API Key，本地 OpenD 直连
 
 快速开始：
 
 ```bash
-# 1. 配置环境变量（在 .env 中）
-LONGPORT_MODE=paper  # 使用模拟账户
+# 1. 启动富途牛牛桌面客户端（自动启动 OpenD）
+
+# 2. 配置 .env
+BROKER_TYPE=futu
+FUTU_MODE=paper        # 先用模拟账户
+FUTU_DRY_RUN=true      # 先开 Dry Run 观察日志
+
+# 3. 启动系统
+python main.py
+```
+
+### 长桥证券集成
+
+切换到长桥：
+
+```bash
+# 1. 配置 .env
+BROKER_TYPE=longport
+LONGPORT_MODE=paper
 LONGPORT_PAPER_APP_KEY=your_key
 LONGPORT_PAPER_APP_SECRET=your_secret
 LONGPORT_PAPER_ACCESS_TOKEN=your_token
 
-# 2. 运行测试
-PYTHONPATH=. python3 test/test_longport_integration.py
+# 2. 运行集成测试
+PYTHONPATH=. python test/test_longport_integration.py
 
-# 3. 启动自动交易
-python3 main.py
+# 3. 启动
+python main.py
 ```
 
-### 其他券商 API
+**完整接入指南**：[LONGPORT_INTEGRATION_GUIDE.md](./doc/LONGPORT_INTEGRATION_GUIDE.md)
 
-如果使用其他券商，在 `main.py` 的 `_on_instruction` 方法中添加你的 API 调用逻辑：
+### 扩展其他券商
 
-```python
-def _on_instruction(self, instruction: OptionInstruction):
-    if instruction.instruction_type == "OPEN":
-        # 开仓
-        broker_api.open_position(
-            ticker=instruction.ticker,
-            option_type=instruction.option_type,
-            strike=instruction.strike,
-            price=instruction.price
-        )
-    elif instruction.instruction_type == "STOP_LOSS":
-        # 设置止损
-        broker_api.set_stop_loss(instruction.price)
-    # ...
-```
+在 `broker/` 目录下新增 `xxx_broker.py` 并实现 `BrokerBase` 接口，然后在 `.env` 中设置 `BROKER_TYPE=xxx` 即可。
