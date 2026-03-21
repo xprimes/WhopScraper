@@ -4,6 +4,7 @@
 消息提取与解析统一由 EnhancedMessageExtractor 完成（含上下文、引用、消息组）。
 支持长桥交易推送（订单状态变化）监听，参见：https://open.longbridge.com/zh-CN/docs/trade/trade-push
 """
+from __future__ import annotations
 import asyncio
 import logging
 import os

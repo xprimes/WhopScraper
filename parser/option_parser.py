@@ -2,6 +2,7 @@
 期权指令正则解析器
 解析各种类型的期权交易信号
 """
+from __future__ import annotations
 import re
 import hashlib
 from datetime import datetime, timedelta
