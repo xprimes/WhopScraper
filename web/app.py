@@ -247,7 +247,7 @@ def api_summary():
 if __name__ == "__main__":
     port = int(os.getenv("FLASK_PORT", "5000"))
     debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
-    mode = "演示数据" if os.getenv("DEMO_MODE", "true").lower() != "false" else "真实数据"
+    mode = "演示数据" if os.getenv("DEMO_MODE", "false").lower() not in ("false", "0", "no") else "真实数据"
     print(f"\n  WhopScraper Dashboard  [{mode}]")
     print(f"  访问地址: http://localhost:{port}")
     print(f"  数据目录: {PROJECT_ROOT / 'data'}")

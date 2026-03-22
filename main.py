@@ -348,7 +348,7 @@ class SignalScraper:
         # 如果没有初始化交易组件，只记录信号（仅首次打 WARNING，避免刷屏）
         if not self.auto_trader or not self.broker:
             if not self._warned_no_trader:
-                logger.warning("⚠️  交易组件未初始化，仅记录信号（请查看启动时「交易组件初始化失败」错误原因）")
+                logger.info("ℹ️  纯监控模式：信号已记录，未启用自动交易（如需下单请设置 FUTU_AUTO_TRADE=true）")
                 self._warned_no_trader = True
             else:
                 logger.debug("交易组件未初始化，跳过执行")
@@ -411,7 +411,7 @@ class SignalScraper:
         """处理股票交易指令：校验、打印、下单。"""
         if not self.auto_trader or not self.broker:
             if not self._warned_no_trader:
-                logger.warning("⚠️  交易组件未初始化，仅记录信号（请查看启动时「交易组件初始化失败」错误原因）")
+                logger.info("ℹ️  纯监控模式：信号已记录，未启用自动交易（如需下单请设置 FUTU_AUTO_TRADE=true）")
                 self._warned_no_trader = True
             return
 
