@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% set auto_refresh = true %}
+
+{% block title %}信号{% endblock %}
+
+{% block content %}
+<h5 class="mb-3 text-muted-soft">解析信号（共 {{ signals|length }} 条，最新在前）</h5>
+
+{% if signals %}
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th style="width:155px;">时间</th>
+            <th>原始消息</th>
+            <th style="width:80px;">指令</th>
+            <th style="width:180px;">合约</th>
+            <th class="text-end" style="width:80px;">价格</th>
+            <th class="text-center" style="width:50px;">状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in signals %}
+          {% set parsed = s.get('parsed') %}
+          {% set origin = s.get('origin') or {} %}
+          <tr>
+            <td class="mono text-muted-soft" style="font-size:12px; white-space:nowrap;">
+              {{ (origin.get('timestamp') or '')[:19] }}
+            </td>
+            <td style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#adbac7;">
+              {{ origin.get('content') or '' }}
+            </td>
+            <td>
+              {% if parsed %}
+                {% set itype = parsed.get('instruction_type') or '' %}
+                {% if itype == 'BUY' %}
+                  <span class="badge badge-buy" style="font-size:11px;">BUY</span>
+                {% elif itype == 'SELL' %}
+                  <span class="badge badge-sell" style="font-size:11px;">SELL</span>
+                {% elif itype == 'MODIFY' %}
+                  <span class="badge badge-modify" style="font-size:11px;">MODIFY</span>
+                {% elif itype == 'CLOSE' %}
+                  <span class="badge badge-close" style="font-size:11px;">CLOSE</span>
+                {% elif itype %}
+                  <span class="badge text-bg-secondary" style="font-size:11px;">{{ itype }}</span>
+                {% else %}
+                  <span class="text-muted-soft">—</span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted-soft" style="font-size:12px;">{{ s.get('reason') or '—' }}</span>
+              {% endif %}
+            </td>
+            <td class="mono" style="font-size:12px; white-space:nowrap;">
+              {% if parsed and parsed.get('ticker') %}
+                <span style="color:#e6edf3;">{{ parsed.get('ticker') }}</span>
+                {% if parsed.get('strike') %}<span class="text-muted-soft"> {{ parsed.get('strike') }}</span>{% endif %}
+                {% if parsed.get('option_type') %}
+                  <span class="badge ms-1 {% if parsed.get('option_type') == 'CALL' %}text-bg-success{% else %}text-bg-danger{% endif %}" style="font-size:10px;">
+                    {{ parsed.get('option_type')[:1] }}
+                  </span>
+                {% endif %}
+                {% if parsed.get('expiry') %}<span class="text-muted-soft"> {{ parsed.get('expiry') }}</span>{% endif %}
+              {% else %}
+                <span class="text-muted-soft">—</span>
+              {% endif %}
+            </td>
+            <td class="text-end mono" style="font-size:12px;">
+              {% if parsed and parsed.get('price') %}
+                ${{ "%.2f"|format(parsed.get('price')|float) }}
+              {% else %}
+                <span class="text-muted-soft">—</span>
+              {% endif %}
+            </td>
+            <td class="text-center" style="font-size:14px;">
+              {{ s.get('status') or '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="card"><div class="card-body text-center text-muted-soft py-5">暂无信号记录</div></div>
+{% endif %}
+{% endblock %}

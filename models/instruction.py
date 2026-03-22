@@ -1,6 +1,7 @@
 """
 交易指令数据模型：基类 OperationInstruction，期权子类 OptionInstruction。
 """
+from __future__ import annotations
 import sys
 from pathlib import Path
 

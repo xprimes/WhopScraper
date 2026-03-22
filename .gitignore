@@ -33,6 +33,10 @@ env/
 *.swo
 *~
 
+# Claude Code / Cursor
+.claude/
+.cursor/
+
 # 环境变量和配置（包含敏感信息）
 .env
 *.env

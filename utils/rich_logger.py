@@ -26,6 +26,7 @@
     logger.trade_stage("解析消息", rows=[("symbol", "CAH...")])
     logger.trade_end()
 """
+from __future__ import annotations
 import threading
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Callable, Tuple

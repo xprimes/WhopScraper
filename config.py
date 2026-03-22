@@ -130,10 +130,18 @@ class Config:
     
     # 日志配置
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")  # DEBUG, INFO, WARNING, ERROR
-    
+
     # 存储路径配置
     POSITION_FILE: str = os.getenv("POSITION_FILE", "data/positions.json")
     LOG_DIR: str = os.getenv("LOG_DIR", "logs")
+
+    # 经纪商选择: futu (默认) | longport
+    BROKER_TYPE: str = os.getenv("BROKER_TYPE", "futu")
+
+    # 富途 OpenD 网关配置
+    FUTU_HOST: str = os.getenv("FUTU_HOST", "127.0.0.1")
+    FUTU_PORT: int = int(os.getenv("FUTU_PORT", "11111"))
+    FUTU_MODE: str = os.getenv("FUTU_MODE", "paper")
     
     # 保留 TARGET_URL 作为向后兼容属性
     @property
