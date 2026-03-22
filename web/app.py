@@ -103,7 +103,7 @@ def _is_demo_mode() -> bool:
     """判断当前是否为 Demo 模式（session 优先，其次环境变量，默认 true）"""
     if "demo_mode" in session:
         return session["demo_mode"]
-    return os.getenv("DEMO_MODE", "true").lower() != "false"
+    return os.getenv("DEMO_MODE", "false").lower() != "false"
 
 
 def _load_json(relative_path: str, default):
