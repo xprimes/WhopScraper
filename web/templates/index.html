@@ -127,7 +127,7 @@
               <span style="font-size:13px;">{{ s.get('status','') }}</span>
             </div>
             <div class="signal-content mt-1">{{ origin.get('content','') }}</div>
-            <div style="font-size:11px; color:#6e7681; margin-top:2px;">{{ (origin.get('timestamp') or '')[:19] }}</div>
+            <div class="signal-time">{{ (origin.get('timestamp') or '')[:19] }}</div>
           </div>
           {% endfor %}
         </div>
