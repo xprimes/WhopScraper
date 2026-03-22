@@ -6,12 +6,14 @@
 """
 from __future__ import annotations
 import asyncio
+import json
 import logging
 import os
 import re
 import threading
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Callable, List, Optional, Set, Tuple
 from playwright.async_api import Page
 
@@ -27,9 +29,52 @@ logger = logging.getLogger(__name__)
 console = _shared_console
 
 
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_PARSED_MSG_FILE = _PROJECT_ROOT / "data" / "parsed_message.json"
+
+
 def _display_width(s: str) -> int:
     """终端显示宽度：ASCII=1，CJK=2。"""
     return len(s) + sum(1 for c in s if "\u4e00" <= c <= "\u9fff")
+
+
+def _append_parsed_signal(record: "Record") -> None:
+    """将解析后的信号持久化追加到 data/parsed_message.json（供 Web Dashboard 读取）。"""
+    try:
+        origin = record.message.to_dict()  # 包含 domID, content, timestamp, refer, position, history
+        parsed = None
+        if record.instruction is not None:
+            try:
+                parsed = record.instruction.to_dict()
+            except Exception:
+                parsed = None
+
+        has_sym = record.instruction is not None and record.instruction.has_symbol()
+        status = "✅" if has_sym else "❌"
+        entry = {"origin": origin, "parsed": parsed, "status": status}
+
+        _PARSED_MSG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            if _PARSED_MSG_FILE.exists():
+                with open(_PARSED_MSG_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if not isinstance(data, list):
+                    data = []
+            else:
+                data = []
+        except Exception:
+            data = []
+
+        # 按 domID 去重，避免重复写入
+        dom_id = origin.get("domID", "") if isinstance(origin, dict) else ""
+        if dom_id and any(e.get("origin", {}).get("domID") == dom_id for e in data):
+            return
+
+        data.append(entry)
+        with open(_PARSED_MSG_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.warning("写入 parsed_message.json 失败: %s", e)
 
 
 # 长桥交易推送（订单状态变化）依赖可选：未配置长桥时仅禁用订单推送监听
@@ -143,6 +188,8 @@ class MessageMonitor:
                     StockInstruction.display_parse_failed(getattr(record.message, "timestamp", None))
                 else:
                     OptionInstruction.display_parse_failed(getattr(record.message, "timestamp", None))
+            # 持久化解析结果到 data/parsed_message.json（Web Dashboard 读取）
+            _append_parsed_signal(record)
             if self._on_new_record and record.instruction is not None and record.instruction.has_symbol():
                 if not getattr(record.instruction, "ignored_by_watchlist", False):
                     self._on_new_record(record)
