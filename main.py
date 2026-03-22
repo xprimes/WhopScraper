@@ -116,16 +116,50 @@ class SignalScraper:
 
     def _init_trading_components(self):
         """初始化交易组件（券商API、持仓管理、自动交易器），通过 logger tag_live 流式追加"""
-        try:
-            broker_type = os.getenv("BROKER_TYPE", "longport").lower()
+        # ------------------------------------------------------------------
+        # 持仓管理器（不依赖券商，始终初始化）
+        # ------------------------------------------------------------------
+        if self.selected_page and self.selected_page[1] == "stock":
+            position_file = "data/stock_positions.json"
+            is_stock_mode = True
+        else:
+            position_file = "data/positions.json"
+            is_stock_mode = False
+        self.position_manager = PositionManager(storage_file=position_file, is_stock_mode=is_stock_mode)
 
+        # ------------------------------------------------------------------
+        # 券商 & 自动交易（可选，FUTU_AUTO_TRADE=false 或 BROKER_TYPE=none 时跳过）
+        # ------------------------------------------------------------------
+        broker_type = os.getenv("BROKER_TYPE", "futu").lower()
+
+        # 判断是否需要连接券商
+        if broker_type == "futu":
+            auto_trade_enabled = os.getenv("FUTU_AUTO_TRADE", "false").lower() == "true"
+        elif broker_type == "longport":
+            auto_trade_enabled = os.getenv("LONGPORT_AUTO_TRADE", "false").lower() == "true"
+        else:
+            auto_trade_enabled = False
+
+        if broker_type == "none" or not auto_trade_enabled:
+            self._rlogger.tag_live_append("程序加载", "🔍 纯监控模式（不连接券商，不自动下单）")
+            self._rlogger.tag_live_append("程序加载", f"如需自动交易，请在 .env 设置 FUTU_AUTO_TRADE=true")
+            self.broker = None
+            self.auto_trader = None
+            self.order_push_monitor = None
+            self._config_update_lines = ["模式：纯监控（信号抓取 + 持仓记录）"]
+            return
+
+        # ------------------------------------------------------------------
+        # 连接券商
+        # ------------------------------------------------------------------
+        try:
             if broker_type == "futu":
                 from broker import FutuBroker
                 self._rlogger.tag_live_append("程序加载", "富途交易接口初始化")
                 self._rlogger.tag_live_append("程序加载", f"OpenD: {os.getenv('FUTU_HOST', '127.0.0.1')}:{os.getenv('FUTU_PORT', '11111')}")
                 self.broker = FutuBroker()
                 self._rlogger.tag_live_append("程序加载", "富途交易接口初始化成功")
-                config = None  # 富途不使用 longport config
+                config = None
             else:
                 config = load_longport_config()
                 region = os.getenv("LONGPORT_REGION", "cn")
@@ -134,21 +168,12 @@ class SignalScraper:
                 self.broker = self._create_broker_with_retry(config)
                 self._rlogger.tag_live_append("程序加载", "长桥交易接口初始化成功")
 
-            if self.selected_page and self.selected_page[1] == "stock":
-                position_file = "data/stock_positions.json"
-                is_stock_mode = True
-            else:
-                position_file = "data/positions.json"
-                is_stock_mode = False
-            self.position_manager = PositionManager(storage_file=position_file, is_stock_mode=is_stock_mode)
-
             self.auto_trader = AutoTrader(broker=self.broker, position_manager=self.position_manager)
             self._rlogger.tag_live_append("程序加载", "自动交易模块初始化成功")
 
             try:
                 _is_option_mode = not (self.selected_page and self.selected_page[1] == "stock")
                 if broker_type == "futu":
-                    # 富途暂不支持订单推送监听
                     self.order_push_monitor = None
                     self._rlogger.tag_live_append("程序加载", "富途暂不支持订单推送监听，已跳过")
                 else:
@@ -182,7 +207,6 @@ class SignalScraper:
             logger.exception("❌ 交易组件初始化失败（详见下方堆栈，请检查 .env 中券商凭证与网络）: %s", e)
             logger.warning("程序将以监控模式运行（不执行交易）")
             self.broker = None
-            self.position_manager = None
             self.auto_trader = None
             self.order_push_monitor = None
             self._config_update_lines = None
